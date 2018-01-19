@@ -131,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
         builder.setCancelable(false);
         builder.show();
     }
-    
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
