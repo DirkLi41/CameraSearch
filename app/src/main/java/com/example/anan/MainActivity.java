@@ -1,13 +1,18 @@
 package com.example.anan;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -18,9 +23,13 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.Spinner;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static android.Manifest.permission.CAMERA;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -54,6 +63,19 @@ public class MainActivity extends AppCompatActivity {
         sp1.setAdapter(engineList);
 
         iv1 = (ImageView) findViewById(R.id.imageView);
+
+        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[] {
+                            Manifest.permission.CAMERA,
+                            Manifest.permission.READ_EXTERNAL_STORAGE},
+                    0
+            );
+        }else{
+
+        }
 
     }
 
@@ -89,9 +111,13 @@ public class MainActivity extends AppCompatActivity {
                 switch(which)
                 {
                     case 0:
-                        sCamera();
+                        Intent camera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        startActivityForResult(camera, 1);
                         break;
                     case 1:
+                        Intent gallery = new Intent(Intent.ACTION_PICK,
+                                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        startActivityForResult(gallery , 2);
                         break;
                 }
             }
@@ -104,25 +130,43 @@ public class MainActivity extends AppCompatActivity {
         });
         builder.setCancelable(false);
         builder.show();
-
     }
+    
 
-    public void sCamera()
-    {
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        startActivityForResult(intent, 0);
-    }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 0)
-        {
-            Bundle bundle = data.getExtras();
-            if (bundle != null)
-            {
-                Bitmap bmp = (Bitmap) bundle.get("data");
-                iv1.setImageBitmap(bmp);
-            }
+
+        switch(requestCode) {
+            case 1:
+                if(resultCode == RESULT_OK){
+                    Bundle bundle = data.getExtras();
+                    Bitmap bmp = (Bitmap) bundle.get("data");
+                    iv1.setImageBitmap(bmp);
+                }
+                break;
+            case 2:
+                if(resultCode == RESULT_OK){
+                    Uri selectedImage = data.getData();
+                    Bitmap bmp = null;
+                    try {
+                        bmp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    iv1.setImageBitmap(bmp);
+                }
+                break;
         }
+    }
+    public void clickEdit(View v)
+    {
+
+    }
+    public void clickSearch(View v)
+    {
+        Uri uri = Uri.parse("http://www.google.com");
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        startActivity(intent);
     }
 }
