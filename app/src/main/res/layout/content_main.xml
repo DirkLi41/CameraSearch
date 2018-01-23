@@ -49,7 +49,7 @@
 
             <TextView
                 android:id="@+id/textView7"
-                android:layout_width="200dp"
+                android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_marginEnd="8dp"
                 android:layout_marginStart="8dp"
@@ -126,7 +126,7 @@
 
             <TextView
                 android:id="@+id/textView2"
-                android:layout_width="235dp"
+                android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_marginEnd="8dp"
                 android:layout_marginStart="8dp"
@@ -186,6 +186,7 @@
                 android:text="請選擇搜尋引擎"
                 android:textAlignment="center"
                 android:textAppearance="@style/TextAppearance.AppCompat.Display1"
+                android:textColor="@android:color/black"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/button" />
@@ -200,6 +201,7 @@
                 android:text="請輸入關鍵字"
                 android:textAlignment="center"
                 android:textAppearance="@style/TextAppearance.AppCompat.Display1"
+                android:textColor="@android:color/black"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
