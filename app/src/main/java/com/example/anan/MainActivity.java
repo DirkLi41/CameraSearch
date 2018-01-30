@@ -16,6 +16,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,13 +24,22 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.Spinner;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -64,8 +74,9 @@ public class MainActivity extends AppCompatActivity {
 
         iv1 = (ImageView) findViewById(R.id.imageView);
 
-        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-        if (permission != PackageManager.PERMISSION_GRANTED) {
+        int perCamera = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
+        int perStorage = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        if (perCamera != PackageManager.PERMISSION_GRANTED | perStorage != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     this,
                     new String[] {
@@ -167,5 +178,26 @@ public class MainActivity extends AppCompatActivity {
         Uri uri = Uri.parse("http://www.google.com");
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         startActivity(intent);
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 0)
+        {
+            if (grantResults.length > 0
+                    && grantResults[0] == PERMISSION_GRANTED
+                    && grantResults[1] == PERMISSION_GRANTED) {
+                //取得權限，進行檔案存取
+
+            } else {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[] {
+                                Manifest.permission.CAMERA,
+                                Manifest.permission.READ_EXTERNAL_STORAGE},
+                        0
+                );
+            }
+            return;
+        }
     }
 }
