@@ -1,6 +1,8 @@
 package com.example.anan;
 
 import android.Manifest;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -9,6 +11,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -17,6 +20,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,7 +31,10 @@ import android.widget.Spinner;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -49,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> engineList;
     ImageView iv1;
     String[] method = {"相機", "圖片庫"};
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -75,19 +83,47 @@ public class MainActivity extends AppCompatActivity {
         iv1 = (ImageView) findViewById(R.id.imageView);
 
         int perCamera = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-        int perStorage = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-        if (perCamera != PackageManager.PERMISSION_GRANTED | perStorage != PackageManager.PERMISSION_GRANTED) {
+        int perRStorage = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        int perWStorage = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (perCamera != PackageManager.PERMISSION_GRANTED |
+                perRStorage != PackageManager.PERMISSION_GRANTED |
+                perWStorage != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     this,
                     new String[] {
                             Manifest.permission.CAMERA,
-                            Manifest.permission.READ_EXTERNAL_STORAGE},
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     0
             );
         }else{
 
         }
 
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 0)
+        {
+            if (grantResults.length > 0
+                    && grantResults[0] == PERMISSION_GRANTED
+                    && grantResults[1] == PERMISSION_GRANTED
+                    && grantResults[2] == PERMISSION_GRANTED) {
+                //取得權限，進行檔案存取
+
+            } else {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[] {
+                                Manifest.permission.CAMERA,
+                                Manifest.permission.READ_EXTERNAL_STORAGE,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        0
+                );
+            }
+            return;
+        }
     }
 
     @Override
@@ -123,6 +159,8 @@ public class MainActivity extends AppCompatActivity {
                 {
                     case 0:
                         Intent camera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        File f = new File(getExternalFilesDir("PHOTO"), "myphoto.jpg");
+                        camera.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(f));
                         startActivityForResult(camera, 1);
                         break;
                     case 1:
@@ -150,14 +188,28 @@ public class MainActivity extends AppCompatActivity {
         switch(requestCode) {
             case 1:
                 if(resultCode == RESULT_OK){
-                    Bundle bundle = data.getExtras();
-                    Bitmap bmp = (Bitmap) bundle.get("data");
-                    iv1.setImageBitmap(bmp);
+//                    Bundle extras = data.getExtras();
+//                    Bitmap bmp = (Bitmap) extras.get("data");
+//                    iv1.setImageBitmap(bmp);
+
+                    File f = new File(getExternalFilesDir("PHOTO"), "myphoto.jpg");
+                    Log.d("URI", "照片URI" + Uri.fromFile(f));
+                    try {
+                        InputStream is = new FileInputStream(f);
+                        Log.d("BMP", "Can READ:" + is.available());
+                        Bitmap bmp = getFitImage(is);
+                        iv1.setImageBitmap(bmp);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
                 break;
             case 2:
                 if(resultCode == RESULT_OK){
                     Uri selectedImage = data.getData();
+                    Log.d("URI", "照片URI" + selectedImage);
                     Bitmap bmp = null;
                     try {
                         bmp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
@@ -169,6 +221,35 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
+    public static Bitmap getFitImage(InputStream is)
+    {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = false;
+        byte[] bytes = new byte[0];
+        try {
+            bytes = readStream(is);
+            //BitmapFactory.decodeStream(inputStream, null, options);
+            Log.d("BMP", "byte length:" + bytes.length);
+            Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+            System.gc();
+            // Log.d("BMP", "Size:" + bmp.getByteCount());
+            return bmp;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public static byte[] readStream(InputStream inStream) throws Exception {
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int len = 0;
+        while ((len = inStream.read(buffer)) != -1) {
+            outStream.write(buffer, 0, len);
+        }
+        outStream.close();
+        inStream.close();
+        return outStream.toByteArray();
+    }
     public void clickEdit(View v)
     {
 
@@ -179,25 +260,5 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         startActivity(intent);
     }
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == 0)
-        {
-            if (grantResults.length > 0
-                    && grantResults[0] == PERMISSION_GRANTED
-                    && grantResults[1] == PERMISSION_GRANTED) {
-                //取得權限，進行檔案存取
 
-            } else {
-                ActivityCompat.requestPermissions(
-                        this,
-                        new String[] {
-                                Manifest.permission.CAMERA,
-                                Manifest.permission.READ_EXTERNAL_STORAGE},
-                        0
-                );
-            }
-            return;
-        }
-    }
 }
