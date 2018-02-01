@@ -16,6 +16,7 @@ import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -56,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> engineList;
     ImageView iv1;
     String[] method = {"相機", "圖片庫"};
+    static String IMAGE_URL;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,13 +92,13 @@ public class MainActivity extends AppCompatActivity {
                 perWStorage != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     this,
-                    new String[] {
+                    new String[]{
                             Manifest.permission.CAMERA,
                             Manifest.permission.READ_EXTERNAL_STORAGE,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     0
             );
-        }else{
+        } else {
 
         }
 
@@ -104,8 +106,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == 0)
-        {
+        if (requestCode == 0) {
             if (grantResults.length > 0
                     && grantResults[0] == PERMISSION_GRANTED
                     && grantResults[1] == PERMISSION_GRANTED
@@ -115,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 ActivityCompat.requestPermissions(
                         this,
-                        new String[] {
+                        new String[]{
                                 Manifest.permission.CAMERA,
                                 Manifest.permission.READ_EXTERNAL_STORAGE,
                                 Manifest.permission.WRITE_EXTERNAL_STORAGE},
@@ -148,25 +149,28 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void showDialog()
-    {
+    public void showDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("請選擇方式");
         builder.setItems(method, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                switch(which)
-                {
+                switch (which) {
                     case 0:
                         Intent camera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         File f = new File(getExternalFilesDir("PHOTO"), "myphoto.jpg");
-                        camera.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(f));
+                        Uri photoURI = FileProvider.getUriForFile(
+                                MainActivity.this,
+                                MainActivity.this.getApplicationContext().getPackageName() + ".my.package.name.provider",
+                                f);
+                        camera.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                        camera.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         startActivityForResult(camera, 1);
                         break;
                     case 1:
                         Intent gallery = new Intent(Intent.ACTION_PICK,
                                 android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                        startActivityForResult(gallery , 2);
+                        startActivityForResult(gallery, 2);
                         break;
                 }
             }
@@ -185,15 +189,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        switch(requestCode) {
+        switch (requestCode) {
             case 1:
-                if(resultCode == RESULT_OK){
+                if (resultCode == RESULT_OK) {
 //                    Bundle extras = data.getExtras();
 //                    Bitmap bmp = (Bitmap) extras.get("data");
 //                    iv1.setImageBitmap(bmp);
 
                     File f = new File(getExternalFilesDir("PHOTO"), "myphoto.jpg");
                     Log.d("URI", "照片URI" + Uri.fromFile(f));
+                    IMAGE_URL = Uri.fromFile(f).toString();
                     try {
                         InputStream is = new FileInputStream(f);
                         Log.d("BMP", "Can READ:" + is.available());
@@ -207,9 +212,10 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
             case 2:
-                if(resultCode == RESULT_OK){
+                if (resultCode == RESULT_OK) {
                     Uri selectedImage = data.getData();
                     Log.d("URI", "照片URI" + selectedImage);
+                    IMAGE_URL = selectedImage.toString();
                     Bitmap bmp = null;
                     try {
                         bmp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
@@ -221,8 +227,8 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
-    public static Bitmap getFitImage(InputStream is)
-    {
+
+    public static Bitmap getFitImage(InputStream is) {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = false;
         byte[] bytes = new byte[0];
@@ -239,6 +245,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return null;
     }
+
     public static byte[] readStream(InputStream inStream) throws Exception {
         ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
@@ -250,15 +257,62 @@ public class MainActivity extends AppCompatActivity {
         inStream.close();
         return outStream.toByteArray();
     }
-    public void clickEdit(View v)
-    {
+
+    public void clickEdit(View v) {
 
     }
-    public void clickSearch(View v)
-    {
-        Uri uri = Uri.parse("http://www.google.com");
-        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-        startActivity(intent);
-    }
 
+    public void clickSearch(View v) {
+        Thread thread = new Thread(mutiThread);
+        thread.start();
+        try {
+            Log.d("ImgURL", String.valueOf(thread));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+    public static String getImgurContent(String clientID) throws Exception {
+        URL url;
+        url = new URL("https://api.imgur.com/3/image");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        String data = URLEncoder.encode("image", "UTF-8") + "="
+                + URLEncoder.encode(IMAGE_URL, "UTF-8");
+
+        conn.setDoOutput(true);
+        conn.setDoInput(true);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Authorization", "Client-ID " + clientID);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type",
+                "application/x-www-form-urlencoded");
+
+        conn.connect();
+        StringBuilder stb = new StringBuilder();
+        OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+        wr.write(data);
+        wr.flush();
+
+        // Get the response
+        BufferedReader rd = new BufferedReader(
+                new InputStreamReader(conn.getInputStream()));
+        String line;
+        while ((line = rd.readLine()) != null) {
+            stb.append(line).append("\n");
+        }
+        wr.close();
+        rd.close();
+
+        return stb.toString();
+    }
+    private Runnable mutiThread = new Runnable() {
+        public void run() {
+            try {
+                getImgurContent("92b0cc32a395668");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    };
 }
