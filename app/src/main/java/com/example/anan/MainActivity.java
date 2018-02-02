@@ -29,6 +29,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.Spinner;
 
+import com.android.volley.AuthFailureError;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -43,7 +45,15 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -58,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView iv1;
     String[] method = {"相機", "圖片庫"};
     static String IMAGE_URL;
+    static Bitmap bmp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
                                 MainActivity.this.getApplicationContext().getPackageName() + ".my.package.name.provider",
                                 f);
                         camera.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                        camera.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//                        camera.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         startActivityForResult(camera, 1);
                         break;
                     case 1:
@@ -199,10 +210,14 @@ public class MainActivity extends AppCompatActivity {
                     File f = new File(getExternalFilesDir("PHOTO"), "myphoto.jpg");
                     Log.d("URI", "照片URI" + Uri.fromFile(f));
                     IMAGE_URL = Uri.fromFile(f).toString();
+                    Uri photoUri = FileProvider.getUriForFile(
+                            MainActivity.this,
+                            MainActivity.this.getApplicationContext().getPackageName() + ".my.package.name.provider",
+                            f);
                     try {
-                        InputStream is = new FileInputStream(f);
+                        InputStream is = getContentResolver().openInputStream(photoUri);
                         Log.d("BMP", "Can READ:" + is.available());
-                        Bitmap bmp = getFitImage(is);
+                        bmp = getFitImage(is);
                         iv1.setImageBitmap(bmp);
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
@@ -216,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
                     Uri selectedImage = data.getData();
                     Log.d("URI", "照片URI" + selectedImage);
                     IMAGE_URL = selectedImage.toString();
-                    Bitmap bmp = null;
+                    bmp = null;
                     try {
                         bmp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
                     } catch (IOException e) {
@@ -263,32 +278,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clickSearch(View v) {
+        Log.d("Img:", IMAGE_URL);
         Thread thread = new Thread(mutiThread);
         thread.start();
-        try {
-            Log.d("ImgURL", String.valueOf(thread));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
     }
-    public static String getImgurContent(String clientID) throws Exception {
+    public static String getImgurContent() throws Exception {
         URL url;
         url = new URL("https://api.imgur.com/3/image");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
+        Log.d("ImgURL", IMAGE_URL);
         String data = URLEncoder.encode("image", "UTF-8") + "="
                 + URLEncoder.encode(IMAGE_URL, "UTF-8");
 
         conn.setDoOutput(true);
         conn.setDoInput(true);
         conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Client-ID " + clientID);
+        conn.setRequestProperty("Authorization", "Bearer 53a4dd1257e5793803aaa0cd5a72619830e32254");
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type",
                 "application/x-www-form-urlencoded");
-
         conn.connect();
+
         StringBuilder stb = new StringBuilder();
         OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
         wr.write(data);
@@ -309,7 +321,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable mutiThread = new Runnable() {
         public void run() {
             try {
-                getImgurContent("92b0cc32a395668");
+                getImgurContent();
             } catch (Exception e) {
                 e.printStackTrace();
             }
