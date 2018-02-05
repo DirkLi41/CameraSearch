@@ -31,6 +31,8 @@ import android.widget.Spinner;
 
 import com.android.volley.AuthFailureError;
 
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -67,7 +69,6 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> engineList;
     ImageView iv1;
     String[] method = {"相機", "圖片庫"};
-    static String IMAGE_URL;
     static Bitmap bmp;
 
     @Override
@@ -209,7 +210,6 @@ public class MainActivity extends AppCompatActivity {
 
                     File f = new File(getExternalFilesDir("PHOTO"), "myphoto.jpg");
                     Log.d("URI", "照片URI" + Uri.fromFile(f));
-                    IMAGE_URL = Uri.fromFile(f).toString();
                     Uri photoUri = FileProvider.getUriForFile(
                             MainActivity.this,
                             MainActivity.this.getApplicationContext().getPackageName() + ".my.package.name.provider",
@@ -230,10 +230,11 @@ public class MainActivity extends AppCompatActivity {
                 if (resultCode == RESULT_OK) {
                     Uri selectedImage = data.getData();
                     Log.d("URI", "照片URI" + selectedImage);
-                    IMAGE_URL = selectedImage.toString();
                     bmp = null;
                     try {
+
                         bmp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
+
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -278,45 +279,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clickSearch(View v) {
-        Log.d("Img:", IMAGE_URL);
+
         Thread thread = new Thread(mutiThread);
         thread.start();
 
     }
     public static String getImgurContent() throws Exception {
-        URL url;
-        url = new URL("https://api.imgur.com/3/image");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        bmp.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+        byte[] byteArray = byteArrayOutputStream .toByteArray();
+        String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
 
-        Log.d("ImgURL", IMAGE_URL);
-        String data = URLEncoder.encode("image", "UTF-8") + "="
-                + URLEncoder.encode(IMAGE_URL, "UTF-8");
+        OkHttpClient client = new OkHttpClient();
 
-        conn.setDoOutput(true);
-        conn.setDoInput(true);
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Bearer 53a4dd1257e5793803aaa0cd5a72619830e32254");
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type",
-                "application/x-www-form-urlencoded");
-        conn.connect();
+        MediaType mediaType = MediaType.parse("multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW");
+        RequestBody body = RequestBody.create(mediaType, "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"image\"\r\n\r\n" + encoded + "\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--");
+        Request request = new Request.Builder()
+                .url("https://api.imgur.com/3/image")
+                .post(body)
+                .addHeader("content-type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW")
+                .addHeader("Authorization", "Bearer 53a4dd1257e5793803aaa0cd5a72619830e32254")
+                .addHeader("Cache-Control", "no-cache")
+                .addHeader("Postman-Token", "3ccf5b2c-48c8-e389-7307-9819e9e547d2")
+                .build();
 
-        StringBuilder stb = new StringBuilder();
-        OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-        wr.write(data);
-        wr.flush();
+        Response response = client.newCall(request).execute();
 
-        // Get the response
-        BufferedReader rd = new BufferedReader(
-                new InputStreamReader(conn.getInputStream()));
-        String line;
-        while ((line = rd.readLine()) != null) {
-            stb.append(line).append("\n");
-        }
-        wr.close();
-        rd.close();
 
-        return stb.toString();
+
+        JSONObject j;
+        String tmp = response.body().string();
+        j = new JSONObject(tmp);
+        Object jsonOb = j.getJSONObject("data").get("link");
+        Log.d("LINK", jsonOb.toString());
+        return jsonOb.toString();
+
+
     }
     private Runnable mutiThread = new Runnable() {
         public void run() {
