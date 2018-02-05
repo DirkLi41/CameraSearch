@@ -27,6 +27,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 
 import com.android.volley.AuthFailureError;
@@ -70,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
     ImageView iv1;
     String[] method = {"相機", "圖片庫"};
     static Bitmap bmp;
+    static String encoded;
+    ProgressBar pb;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
         sp1.setAdapter(engineList);
 
         iv1 = (ImageView) findViewById(R.id.imageView);
+        pb = (ProgressBar) findViewById(R.id.progressBar);
 
         int perCamera = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
         int perRStorage = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -113,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
         } else {
 
         }
+
+
 
     }
 
@@ -279,16 +285,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clickSearch(View v) {
+        pb.setVisibility(View.VISIBLE);
 
         Thread thread = new Thread(mutiThread);
         thread.start();
 
+        Thread thread2 = new Thread(searchThread);
+        try {
+            thread2.sleep(20000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        thread2.start();
+
+
+
+
+
     }
     public static String getImgurContent() throws Exception {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+        bmp.compress(Bitmap.CompressFormat.JPEG, 50, byteArrayOutputStream);
         byte[] byteArray = byteArrayOutputStream .toByteArray();
-        String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+        encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
 
         OkHttpClient client = new OkHttpClient();
 
@@ -305,8 +324,6 @@ public class MainActivity extends AppCompatActivity {
 
         Response response = client.newCall(request).execute();
 
-
-
         JSONObject j;
         String tmp = response.body().string();
         j = new JSONObject(tmp);
@@ -315,11 +332,25 @@ public class MainActivity extends AppCompatActivity {
         return jsonOb.toString();
 
 
+
     }
     private Runnable mutiThread = new Runnable() {
         public void run() {
             try {
                 getImgurContent();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private Runnable searchThread = new Runnable() {
+        public void run() {
+            Uri uri = null;
+            try {
+                uri = Uri.parse("https://images.google.com/searchbyimage?image_url=" + getImgurContent());
+                Log.d("SEARCH:", getImgurContent());
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                startActivity(intent);
             } catch (Exception e) {
                 e.printStackTrace();
             }
