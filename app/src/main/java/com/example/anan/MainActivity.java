@@ -66,13 +66,14 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 public class MainActivity extends AppCompatActivity {
 
     Spinner sp1;
-    String[] engine = {"Google", "百度"};
+    String[] engine = {"Google", "Yandex"};
     ArrayAdapter<String> engineList;
     ImageView iv1;
     String[] method = {"相機", "圖片庫"};
     static Bitmap bmp;
     static String encoded;
     ProgressBar pb;
+    static Thread thread, thread2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -290,22 +291,19 @@ public class MainActivity extends AppCompatActivity {
         Thread thread = new Thread(mutiThread);
         thread.start();
 
-        Thread thread2 = new Thread(searchThread);
         try {
-            thread2.sleep(20000);
-        } catch (InterruptedException e) {
+            do{
+                Thread thread2 = new Thread(searchThread);
+                thread2.start();
+            }
+            while(getImgurContent() != null);
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        thread2.start();
-
-
-
-
-
     }
     public static String getImgurContent() throws Exception {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 50, byteArrayOutputStream);
+        bmp.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
         byte[] byteArray = byteArrayOutputStream .toByteArray();
         encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
 
@@ -330,11 +328,8 @@ public class MainActivity extends AppCompatActivity {
         Object jsonOb = j.getJSONObject("data").get("link");
         Log.d("LINK", jsonOb.toString());
         return jsonOb.toString();
-
-
-
     }
-    private Runnable mutiThread = new Runnable() {
+    Runnable mutiThread = new Runnable() {
         public void run() {
             try {
                 getImgurContent();
@@ -343,7 +338,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-    private Runnable searchThread = new Runnable() {
+    Runnable searchThread = new Runnable() {
         public void run() {
             Uri uri = null;
             try {
@@ -351,6 +346,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("SEARCH:", getImgurContent());
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                 startActivity(intent);
+                pb.setVisibility(View.INVISIBLE);
             } catch (Exception e) {
                 e.printStackTrace();
             }
