@@ -1,6 +1,7 @@
 package com.example.anan;
 
 import android.Manifest;
+import android.app.SearchManager;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -286,20 +287,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clickSearch(View v) {
-        pb.setVisibility(View.VISIBLE);
-
-        Thread thread = new Thread(mutiThread);
-        thread.start();
-
-        try {
-            do{
-                Thread thread2 = new Thread(searchThread);
-                thread2.start();
-            }
-            while(getImgurContent() != null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        pb.setVisibility(View.VISIBLE);
+//
+//        Thread thread = new Thread(mutiThread);
+//        thread.start();
+//
+//        try {
+//            do{
+//                Thread thread2 = new Thread(searchThread);
+//                thread2.start();
+//            }
+//            while(getImgurContent() != null);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+        Intent intent = new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com.tw/search?source=hp&ei=AmF5WuHEJIWs0ASjq6OwAw&q=" + "porn"));
+        startActivity(intent);
     }
     public static String getImgurContent() throws Exception {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
